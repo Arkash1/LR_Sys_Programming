@@ -1,196 +1,139 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.management.ManagementFactory;
+import java.util.Scanner;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
-public class LR_1 {
-    private static List<Process> runningProcesses = new ArrayList<>();
-    private static Scanner scanner = new Scanner(System.in);
-
+public class Main {
     public static void main(String[] args) {
-        System.out.println("=== Менеджер процессов ===");
+        // Создаем сканер для чтения с клавиатуры
+        Scanner sc = new Scanner(System.in);
 
-        while (true) {
-            printMenu();
-            int choice = getIntInput("Выберите действие: ");
-
-            switch (choice) {
-                case 1:
-                    startProcess();
-                    break;
-                case 2:
-                    listProcesses();
-                    break;
-                case 3:
-                    terminateProcess();
-                    break;
-                case 4:
-                    System.out.println("Выход из программы.");
-                    return;
-                default:
-                    System.out.println("Неверный выбор. Попробуйте снова.");
-            }
-        }
-    }
-
-    private static void printMenu() {
-        System.out.println("\n1. Запустить процесс");
-        System.out.println("2. Показать запущенные процессы");
-        System.out.println("3. Завершить процесс");
-        System.out.println("4. Выход");
-    }
-
-    private static void startProcess() {
         try {
-            System.out.print("Введите имя процесса для запуска: ");
-            String processName = scanner.nextLine().trim();
+            System.out.println("Выберите процесс для запуска:");
+            System.out.println("1 - Блокнот");
+            System.out.println("2 - Калькулятор");
+            System.out.println("3 - Пэйнт");
+            System.out.println("4 - Все процессы сразу");
+            System.out.print("Ваш выбор: ");
+            
+            // Читаем выбранный номер
+            int num = sc.nextInt();
+            sc.nextLine(); // пропускаем перенос строки
 
-            if (processName.isEmpty()) {
-                System.out.println("Имя процесса не может быть пустым.");
+            // Сюда будем складывать названия программ
+            List<String> progNames = new ArrayList<>();
+
+            // Смотрим, что выбрал пользователь
+            switch (num) {
+                case 1 -> progNames.add("notepad.exe");
+                case 2 -> progNames.add("calc.exe");
+                case 3 -> progNames.add("mspaint.exe");
+                case 4 -> {
+                    // Добавляем сразу всё
+                    progNames.add("notepad.exe");
+                    progNames.add("calc.exe");
+                    progNames.add("mspaint.exe");
+                }
+                default -> {
+                    System.out.println("Ошибка, выберите другой процесс");
+                    return; // выходим
+                }
+            }
+
+            // Список самих запущенных процессов
+            List<Process> activeProcs = new ArrayList<>();
+            // Мапа чтобы помнить какой процесс как называется
+            Map<String, Process> procsMap = new HashMap<>();
+
+            // Пробегаем по названиям и запускаем
+            for (String name : progNames) {
+                try {
+                    Process p = new ProcessBuilder(name).start();
+                    activeProcs.add(p);
+                    procsMap.put(name, p);
+                    System.out.println("Процесс " + name + " запущен с PID: " + p.pid());
+                } catch (IOException ex) {
+                    System.out.println("Ошибка запуска " + name + ": " + ex.getMessage());
+                }
+            }
+
+            // Если список пустой, значит ничего не вышло
+            if (activeProcs.isEmpty()) {
+                System.out.println("Ни один процесс не был запущен!");
                 return;
             }
 
-            Process process;
+            System.out.print("\nЗакрыть все процессы? (д/н): ");
+            String res = sc.nextLine();
 
-            // Определяем команду в зависимости от операционной системы
-            String os = System.getProperty("os.name").toLowerCase();
-            String command;
-
-            if (os.contains("win")) {
-                // Windows
-                if (processName.equalsIgnoreCase("notepad")) {
-                    command = "notepad.exe";
-                } else if (processName.equalsIgnoreCase("calc")) {
-                    command = "calc.exe";
-                } else if (processName.equalsIgnoreCase("mspaint")) {
-                    command = "mspaint.exe";
-                } else {
-                    command = processName;
+            // Если ответили "д"
+            if (res.equalsIgnoreCase("д")) {
+                // Закрываем всё
+                for (Process p : activeProcs) {
+                    p.destroy();
                 }
+                System.out.println("Все процессы завершены.");
+
+                System.out.println("\nИнформация о всех процессах:");
+
+                // Выводим инфу по каждому
+                for (Map.Entry<String, Process> entry : procsMap.entrySet()) {
+                    String name = entry.getKey();
+                    Process p = entry.getValue();
+
+                    // Собираем данные
+                    Map<String, String> info = new HashMap<>();
+                    info.put("Имя процесса", name);
+                    info.put("Пиды", String.valueOf(p.pid()));
+
+                    try {
+                        info.put("Код завершения", String.valueOf(p.exitValue()));
+                    } catch (IllegalThreadStateException ex) {
+                        info.put("Код завершения", "Ещё не завершился");
+                    }
+
+                    info.put("Статус выполнения", String.valueOf(p.isAlive()));
+
+                    System.out.println("\n--- " + name + " ---");
+                    for (Map.Entry<String, String> item : info.entrySet()) {
+                        System.out.println(item.getKey() + ": " + item.getValue());
+                    }
+                    System.out.println("----------------------");
+                }
+
+                System.out.println("\nСписок всех PID'ов:");
+                for (Process p : activeProcs) {
+                    System.out.println("PID: " + p.pid());
+                }
+
             } else {
-                // Linux/Mac
-                command = processName;
-            }
+                // Если решили оставить
+                System.out.println("Процессы оставлены работать.");
 
-            process = Runtime.getRuntime().exec(command);
-            runningProcesses.add(process);
-
-            System.out.println("Процесс '" + processName + "' запущен. PID: " + getProcessId(process));
-            printProcessInfo(process);
-
-        } catch (IOException e) {
-            System.out.println("Ошибка при запуске процесса: " + e.getMessage());
-        }
-    }
-
-    private static void listProcesses() {
-        if (runningProcesses.isEmpty()) {
-            System.out.println("Нет запущенных процессов.");
-            return;
-        }
-
-        System.out.println("\n=== Запущенные процессы ===");
-        for (int i = 0; i < runningProcesses.size(); i++) {
-            Process process = runningProcesses.get(i);
-            System.out.println((i + 1) + ". PID: " + getProcessId(process) +
-                    ", Alive: " + process.isAlive());
-            printProcessInfo(process);
-        }
-    }
-
-    private static void terminateProcess() {
-        if (runningProcesses.isEmpty()) {
-            System.out.println("Нет запущенных процессов для завершения.");
-            return;
-        }
-
-        listProcesses();
-        int processIndex = getIntInput("Выберите номер процесса для завершения: ") - 1;
-
-        if (processIndex < 0 || processIndex >= runningProcesses.size()) {
-            System.out.println("Неверный номер процесса.");
-            return;
-        }
-
-        Process process = runningProcesses.get(processIndex);
-
-        if (!process.isAlive()) {
-            System.out.println("Процесс уже завершен.");
-            runningProcesses.remove(processIndex);
-            return;
-        }
-
-        System.out.print("Завершить процесс? (д/н): ");
-        String confirmation = scanner.nextLine().trim().toLowerCase();
-
-        if (confirmation.equals("д") || confirmation.equals("y") || confirmation.equals("да")) {
-            try {
-                process.destroy();
-                if (process.isAlive()) {
-                    process.destroyForcibly();
+                System.out.println("\nСписок всех запущенных PID'ов:");
+                for (Process p : activeProcs) {
+                    // Тут используем вспомогательный метод для имени
+                    System.out.println("PID: " + p.pid() + " (" +
+                            findName(procsMap, p) + ")");
                 }
-                runningProcesses.remove(processIndex);
-                System.out.println("Процесс завершен.");
-            } catch (Exception e) {
-                System.out.println("Ошибка при завершении процесса: " + e.getMessage());
             }
-        } else {
-            System.out.println("Завершение процесса отменено.");
-        }
-    }
 
-    private static long getProcessId(Process process) {
-        try {
-            // Для Java 9+ можно использовать process.pid()
-            if (process.getClass().getName().equals("java.lang.ProcessImpl")) {
-                java.lang.reflect.Field pidField = process.getClass().getDeclaredField("pid");
-                pidField.setAccessible(true);
-                return pidField.getLong(process);
-            }
         } catch (Exception e) {
-            // Если не удалось получить PID через reflection
-        }
-
-        // Альтернативный способ получения информации о процессе
-        String processInfo = process.toString();
-        try {
-            // Извлекаем PID из строкового представления
-            if (processInfo.contains("pid=")) {
-                String pidStr = processInfo.substring(processInfo.indexOf("pid=") + 4);
-                pidStr = pidStr.split(",")[0].split(" ")[0].replace("}", "");
-                return Long.parseLong(pidStr);
-            }
-        } catch (Exception e) {
-            // Если не удалось извлечь PID
-        }
-
-        return -1; // Неизвестный PID
-    }
-
-    private static void printProcessInfo(Process process) {
-        try {
-            long pid = getProcessId(process);
-            System.out.println("   PID: " + (pid != -1 ? pid : "неизвестен"));
-            System.out.println("   Статус: " + (process.isAlive() ? "запущен" : "завершен"));
-            System.out.println("   Поток ошибок: " + (process.getErrorStream().available() > 0 ? "есть данные" : "пуст"));
-            System.out.println("   Выходной поток: " + (process.getInputStream().available() > 0 ? "есть данные" : "пуст"));
-        } catch (IOException e) {
-            System.out.println("   Ошибка при получении информации: " + e.getMessage());
+            System.out.println("Ошибка: " + e.getMessage());
+        } finally {
+            sc.close();
         }
     }
 
-    private static int getIntInput(String prompt) {
-        while (true) {
-            try {
-                System.out.print(prompt);
-                String input = scanner.nextLine();
-                return Integer.parseInt(input);
-            } catch (NumberFormatException e) {
-                System.out.println("Пожалуйста, введите целое число.");
+    // Метод ищет название проги по самому процессу
+    private static String findName(Map<String, Process> map, Process p) {
+        for (Map.Entry<String, Process> entry : map.entrySet()) {
+            if (entry.getValue().equals(p)) {
+                return entry.getKey();
             }
         }
+        return "Неизвестный процесс";
     }
 }
