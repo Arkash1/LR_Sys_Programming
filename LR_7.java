@@ -1,44 +1,48 @@
 import java.util.Scanner;
 
-class WeakPasswordException extends IllegalArgumentException {
-    public WeakPasswordException(String message) {
-        super(message);
-    }
-}
+public class Main {
 
-//Класс для валидации пароля
-class PasswordValidator {
-    private static final int MIN_LENGTH = 8;
-
-    public static void validatePassword(String password) {
-        if (password == null || password.length() < MIN_LENGTH) {
-            throw new WeakPasswordException(
-                    "Пароль слишком короткий! Минимум " + MIN_LENGTH + " символов"
-            );
-        }
-
-        if (!password.matches(".*[0-9].*")) {
-            throw new WeakPasswordException(
-                    "Пароль должен содержать хотя бы одну цифру"
-            );
+    // Мой класс ошибки, если бананов не хватит
+    public static class LowBananasException extends Exception {
+        public LowBananasException(String text) {
+            super(text);
         }
     }
-}
 
-public class LR_7 {
+    // Класс для проверки условий
+    public static class Checker {
+        // Константа: минимум нужно 3 штуки
+        private static final int MIN_COUNT = 3;
+
+        // Метод проверяет количество
+        public static void validate(int n) throws LowBananasException {
+            if (n < MIN_COUNT) {
+                // Если мало, кидаем ошибку
+                throw new LowBananasException(
+                        "Ты принёс всего " + n + " банан(а/ов)! А нужно минимум " + MIN_COUNT + "!\n" +
+                                "Обезьянка расстроена("
+                );
+            }
+        }
+    }
+
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
+        Scanner sc = new Scanner(System.in);
 
-        System.out.print("Введите пароль для проверки: ");
-        String password = scanner.nextLine();
+        System.out.print("Сколько бананов ты взял для обезьянки? ");
+        // Считываем число введенное пользователем
+        int count = sc.nextInt();
 
         try {
-            PasswordValidator.validatePassword(password);
-            System.out.println("Пароль надежный!");
-        } catch (WeakPasswordException e) {
-            System.out.println("Ошибка: " + e.getMessage());
+            // Пробуем проверить число через наш чекер
+            Checker.validate(count);
+            System.out.println("Обезьянка в восторге! ");
+        } catch (LowBananasException ex) {
+            // Если поймали нашу ошибку, выводим сообщение
+            System.out.println("Ошибка:");
+            System.out.println(ex.getMessage());
         }
 
-        scanner.close();
+        sc.close();
     }
 }
